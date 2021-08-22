@@ -1,9 +1,11 @@
 
+#[derive(Debug)]
 pub struct Expr {
     pub location: isize,
     pub expr: EExpr,
 }
 
+#[derive(Debug)]
 pub enum EExpr {
     BoolExpr(bool),
     NumberExpr(i64),
@@ -16,10 +18,12 @@ pub enum EExpr {
     LetExpr { name: String, value: Box<Expr>, body: Box<Expr> },
 }
 
+#[derive(Debug)]
 pub enum BinOp {
     Plus, Minus, Times, Divide, And, Or, Xor,
 }
 
+#[derive(Debug)]
 pub enum UnaryOp {
     Negative, Not,
 }
