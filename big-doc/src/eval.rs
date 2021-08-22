@@ -4,7 +4,7 @@ use crate::ast::BinOp;
 use crate::ast::UnaryOp;
 use im_rc::hashmap::HashMap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     BoolValue(bool),
     NumberValue(i64),
@@ -86,6 +86,79 @@ pub fn eval(expr: Expr, bindings: &HashMap<String, Value>) -> Value {
         },
         EExpr::LetExpr { name, value, body } => {
             eval(*body, &bindings.update(name, eval(*value, bindings)))
-        }
+        },
+        EExpr::FunctionCallExpr { arg_expr, func } => {
+            match func.expr {
+                EExpr::FunctionExpr { arg, body } => eval(*body, &bindings.update(arg, eval(*arg_expr, bindings))),
+                _ => panic!("wrong expr type as function")
+            }
+        },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ast::Expr;
+    use super::*;
+    use im_rc::hashmap;
+
+    fn get_expr(e: EExpr) -> Expr {
+        Expr{ expr: e, location: 10 }
+    }
+
+    #[test]
+    fn test_bin_op_expr() {
+        let lhs = EExpr::NumberExpr(10);
+        let rhs = EExpr::NumberExpr(20);
+        let e = EExpr::BinOpExpr {
+            lhs: Box::new(get_expr(lhs)),
+            rhs: Box::new(get_expr(rhs)),
+            op: BinOp::Plus,
+        };
+
+        assert_eq!(eval(get_expr(e), &hashmap!{}), Value::NumberValue(30));
+    }
+
+    #[test]
+    fn test_let_expr() {
+        let lhs = EExpr::IdentifierExpr("x".to_string());
+        let rhs = EExpr::NumberExpr(1);
+        let e1 = EExpr::BinOpExpr {
+            lhs: Box::new(get_expr(lhs)),
+            rhs: Box::new(get_expr(rhs)),
+            op: BinOp::Plus,
+        };
+
+        let e2 = EExpr::LetExpr {
+            name: "x".to_string(),
+            value: Box::new(get_expr(EExpr::NumberExpr(2))),
+            body: Box::new(get_expr(e1))
+        };
+
+        assert_eq!(eval(get_expr(e2), &hashmap!{}), Value::NumberValue(3));
+    }
+
+    #[test]
+    fn test_func_call_expr() {
+        let lhs = EExpr::IdentifierExpr("x".to_string());
+        let rhs = EExpr::NumberExpr(1);
+        let body = EExpr::BinOpExpr {
+            lhs: Box::new(get_expr(lhs)),
+            rhs: Box::new(get_expr(rhs)),
+            op: BinOp::Plus,
+        };
+
+        let func = EExpr::FunctionExpr {
+            arg: "x".to_string(),
+            body: Box::new(get_expr(body)),
+        };
+
+        let arg_expr = EExpr::NumberExpr(2);
+        let func_call = EExpr::FunctionCallExpr {
+            arg_expr: Box::new(get_expr(arg_expr)),
+            func: Box::new(get_expr(func)),
+        };
+
+        assert_eq!(eval(get_expr(func_call), &hashmap!{}), Value::NumberValue(3));
     }
 }
